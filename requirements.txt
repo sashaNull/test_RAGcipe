@@ -16,4 +16,4 @@ sentence-transformers
 langchain
 langchain_community
 python-dotenv
-
+pysqlite3-binary
