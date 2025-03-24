@@ -1,3 +1,11 @@
+import sys
+try:
+    import pysqlite3  # This is the pip-installed "pysqlite3-binary" package
+    # Re-map the built-in "sqlite3" to "pysqlite3"
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass  # if pysqlite3 isn't found, fallback to system sqlite3
+
 import chromadb
 from chromadb.utils import embedding_functions
 from sentence_transformers import CrossEncoder
@@ -5,13 +13,24 @@ from openai import OpenAI
 import os
 import re
 from dotenv import load_dotenv
+import requests
+from functools import lru_cache
 
-# Load environment variables from .env
+# --- URL Validation with Caching and Retry ---
+@lru_cache(maxsize=1000)
+def is_valid_url(url: str) -> bool:
+    try:
+        response = requests.head(url, allow_redirects=True, timeout=5)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+# --- Load Environment Variables ---
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=openai_api_key)
 
-# Initialize Cross-Encoder model for reranking
+# --- Initialize Cross-Encoder for Reranking ---
 cross_encoder_model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
 def rerank(query, documents, metadatas, top_k=3):
@@ -20,14 +39,14 @@ def rerank(query, documents, metadatas, top_k=3):
     ranked_results = sorted(zip(documents, metadatas, scores), key=lambda x: x[2], reverse=True)
     return ranked_results[:top_k]
 
-# ChromaDB setup for recipes (using OpenAI embeddings)
+# --- ChromaDB Setup for Recipes ---
 recipes_client = chromadb.PersistentClient(path="chroma_db")
 openai_ef = embedding_functions.OpenAIEmbeddingFunction(
     api_key=openai_api_key, model_name="text-embedding-ada-002"
 )
 recipes_collection = recipes_client.get_collection("recipes_collection", embedding_function=openai_ef)
 
-# ChromaDB setup for ingredients (Fairprice with OpenAI embeddings)
+# --- ChromaDB Setup for Ingredients (FairPrice) ---
 ingredients_client = chromadb.PersistentClient(path="fairprice_openai_embeddings_db")
 ingredients_collection = ingredients_client.get_collection("fairprice_products_openai", embedding_function=openai_ef)
 
@@ -38,6 +57,9 @@ def generate_prompt(user_query, recipe_name, recipe_url, recipe_details, nutriti
         for prod in products:
             meta = prod['metadata']
             product_url = meta.get('url', 'N/A')
+            # Skip dead links using our cached URL validator
+            if product_url != 'N/A' and not is_valid_url(product_url):
+                continue
             ingredient_str += f"- {meta['name']} by {meta['brand']} (Price: ${meta['price']}, Size: {meta['size']}, URL: {product_url})\n"
     
     prompt = f"""
@@ -98,15 +120,22 @@ def extract_ingredients(recipe_text):
     return []
 
 def search_ingredients_chroma(ingredient_name, top_k=3):
-    results = ingredients_collection.query(
-        query_texts=[ingredient_name],
-        n_results=top_k,
-        include=['metadatas', 'documents', 'distances']
-    )
-    matched_products = []
-    for meta, doc, dist in zip(results['metadatas'][0], results['documents'][0], results['distances'][0]):
-        matched_products.append({"metadata": meta, "document": doc, "similarity": dist})
-    return matched_products
+    # Return empty list if ingredient_name is empty or whitespace.
+    if not ingredient_name or not ingredient_name.strip():
+        return []
+    try:
+        results = ingredients_collection.query(
+            query_texts=[ingredient_name],
+            n_results=top_k,
+            include=['metadatas', 'documents', 'distances']
+        )
+        matched_products = []
+        for meta, doc, dist in zip(results['metadatas'][0], results['documents'][0], results['distances'][0]):
+            matched_products.append({"metadata": meta, "document": doc, "similarity": dist})
+        return matched_products
+    except Exception as e:
+        print(f"Error querying ingredient '{ingredient_name}': {e}")
+        return []
 
 def query_all(query_text, n_results=5):
     print(f"\n🔎 Querying for: {query_text}")
@@ -152,9 +181,31 @@ def query_all(query_text, n_results=5):
     print("\n✨ LLM-generated Culinary Response:")
     print(llm_response)
     
-    # Return the response for evaluation purposes
-    return llm_response
+    # Build a contexts list that combines recipe details, nutritional info, and each valid ingredient product info.
+    contexts = [
+        f"Recipe Details: {recipe_doc}",
+        f"Nutritional Information: {nutritional_data}"
+    ]
+    for ing, products in ingredients_from_db.items():
+        for prod in products:
+            meta = prod['metadata']
+            product_url = meta.get('url', 'N/A')
+            if product_url != 'N/A' and not is_valid_url(product_url):
+                continue
+            contexts.append(
+                f"FairPrice Ingredient: {meta['name']} by {meta['brand']} (Price: ${meta['price']}, Size: {meta['size']}, URL: {product_url})"
+            )
+    
+    # Return a dictionary with all the information for evaluation.
+    # Note: We do not include a "reference" key since we're using reference-free metrics.
+    return {
+        "question": query_text,
+        "answer": llm_response,
+        "contexts": contexts
+    }
 
 if __name__ == "__main__":
     query_text = "cheap high protein tofu dish"
-    query_all(query_text)
+    result = query_all(query_text)
+    print("\nResult for evaluation:")
+    print(result)
