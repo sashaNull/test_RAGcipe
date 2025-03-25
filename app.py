@@ -1,3 +1,6 @@
+import sys
+sys.modules["torch.classes"] = None
+
 # app.py
 import streamlit as st
 import os
@@ -56,8 +59,12 @@ def main():
         if st.button("🚀 Get Culinary Response"):
             with st.spinner("⏳ Querying... Please wait."):
                 response = Full_Prompt_new.query_all(query)
-            st.subheader("LLM Response")
-            st.markdown(response)
+                if isinstance(response, dict) and "answer" in response:
+                    formatted_response = response["answer"]
+                else:
+                    formatted_response = str(response)
+                st.subheader("LLM Response")
+                st.markdown(formatted_response, unsafe_allow_html=True)
     else:
         st.warning("⚠️ Please enter your OpenAI API Key to continue.")
     
