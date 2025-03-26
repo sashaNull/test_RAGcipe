@@ -96,12 +96,16 @@ Please provide your response in four sections:
 1. **Recipe Summary** – Summarize the key steps and ingredients in a concise and clear paragraph, including the recipe source URL.
 2. **Affordable Ingredient Recommendations** – For each necessary ingredient, identify the three most relevant and cost-effective FairPrice products (based on price and quantity), including their price, source URL an quantity.
 3. **Nutritional Analysis** – Provide a clear analysis based on the nutritional information of the recipe and the ingredients. Discuss the health benefits or potential dietary advantages (e.g., high protein content, low saturated fat, rich in fiber, etc.). Mention who might benefit from this dish (e.g., vegetarians, fitness enthusiasts, people watching cholesterol).
-4. **Cost Estimate**:
-    + Estimate the total cost to prepare this recipe using the selected FairPrice ingredients.
-    + If an ingredient has multiple product options, select the most relevant, cost-effective combination (based on price and quantity) to estimate the total cost. Relevancy is more important than cost efficiency.
-    + For each product in the chosen combination, include its price, quantity purchased, and URL.
-    + Then, calculate how many full servings of the recipe can be made from the purchased ingredient quantities (based on the limiting ingredient).
-    + Finally, provide the estimated cost per serving by dividing the total cost by the number of servings, and break down how much each ingredient contributes to the cost of a single serving.
+4. **Cost Estimate**: 
+- Estimate the total cost to prepare this recipe using the selected FairPrice ingredients.
+- If an ingredient has multiple product options, select the most relevant, cost-effective combination (based on price and quantity) to estimate the total cost. Relevancy is more important than cost efficiency.
+- For each product in the chosen combination, include its price, quantity purchased, and URL.
+- Determine how many full servings can be made with the purchased quantities based on the recipe’s required amount of each ingredient.
+- If the initial estimate results in only 1 serving due to a limiting ingredient, suggest whether it’s reasonable to purchase more of that ingredient to increase the number of servings and lower the cost per serving.
+- Provide both:
++ The cost per serving based on the original ingredient purchase
++ An optimized cost per serving assuming the user buys more of the limiting ingredient (if it leads to better cost-efficiency).
++ Break down how much each ingredient contributes to the cost of a single serving.
 """
     return prompt
 
