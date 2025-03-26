@@ -40,32 +40,19 @@ st.markdown(
 
 def main():
     st.markdown("<div class='header'>✨ RAGcipe Culinary Assistant ✨</div>", unsafe_allow_html=True)
-    st.write("Enter your OpenAI API Key and a culinary query to receive recipe suggestions with affordable ingredient recommendations, nutritional analysis, and cost estimates. :chef:")
+        
+    # Allow the user to enter their culinary query
+    query = st.text_input("🍽️ Enter your culinary query:", "high protein tofu dish")
 
-    # Ask for the user's OpenAI API key
-    user_api_key = st.text_input("🔑 Enter your OpenAI API Key:", type="password")
-    
-    if user_api_key:
-        # Set the API key in the environment variable
-        os.environ["OPENAI_API_KEY"] = user_api_key
-        # Reload the Full_Prompt_new module to pick up the new API key
-        importlib.reload(Full_Prompt_new)
-        st.success("✅ API Key has been set successfully.")
-        
-        # Allow the user to enter their culinary query
-        query = st.text_input("🍽️ Enter your culinary query:", "high protein tofu dish")
-        
-        if st.button("🚀 Get Culinary Response"):
-            with st.spinner("⏳ Querying... Please wait."):
-                response = Full_Prompt_new.query_all(query)
-                if isinstance(response, dict) and "answer" in response:
-                    formatted_response = response["answer"]
-                else:
-                    formatted_response = str(response)
-                st.subheader("LLM Response")
-                st.markdown(formatted_response, unsafe_allow_html=True)
-    else:
-        st.warning("⚠️ Please enter your OpenAI API Key to continue.")
+    if st.button("🚀 Get Culinary Response"):
+        with st.spinner("⏳ Querying... Please wait."):
+            response = Full_Prompt_new.query_all(query)
+            if isinstance(response, dict) and "answer" in response:
+                formatted_response = response["answer"]
+            else:
+                formatted_response = str(response)
+            st.subheader("LLM Response")
+            st.markdown(formatted_response, unsafe_allow_html=True)
     
     st.markdown("<div class='footer'>© 2025 RAGcipe Team - Powered by OpenAI & FairPrice Data</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
