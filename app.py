@@ -39,7 +39,6 @@ st.markdown(
 )
 
 def main():
-    st.markdown("<div class='main'>", unsafe_allow_html=True)
     st.markdown("<div class='header'>✨ RAGcipe Culinary Assistant ✨</div>", unsafe_allow_html=True)
     st.write("Enter your OpenAI API Key and a culinary query to receive recipe suggestions with affordable ingredient recommendations, nutritional analysis, and cost estimates. :chef:")
 
